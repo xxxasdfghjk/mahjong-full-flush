@@ -1,10 +1,6 @@
 import { stringify } from 'querystring';
-import {
-    MahjongHand,
-    Tile,
-    Context,
-    OneColorReadyHandGenerator
-} from './MahjongHand';
+import { MahjongHand, Tile, Context } from './MahjongHand';
+import { OneColorReadyHandGenerator } from './OneColorHandGenerator';
 const fs = require('graceful-fs');
 
 const test: { hand: MahjongHand; context: Context }[] = [
@@ -225,8 +221,12 @@ function HandUtilTest() {
         }
     });
 }
-function GenerateHandTest() {
-    const oneColorReadyHandGenerator = new OneColorReadyHandGenerator();
-    oneColorReadyHandGenerator.dumpReadyHand();
+async function GenerateHandTest() {
+    const oneColorReadyHandGenerator = await OneColorReadyHandGenerator.build();
+    console.log(oneColorReadyHandGenerator.getRandomOne());
+    console.log(oneColorReadyHandGenerator.getRandomOne());
+    console.log(oneColorReadyHandGenerator.getRandomOne());
+    console.log(oneColorReadyHandGenerator.getRandomOne());
+    console.log(oneColorReadyHandGenerator.getRandomOne());
 }
 GenerateHandTest();

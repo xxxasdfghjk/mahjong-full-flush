@@ -1,4 +1,5 @@
 import { KeyPairSyncResult } from 'crypto';
+import { arrayBuffer } from 'stream/consumers';
 
 type SuitType = Honors | Simples | 'None';
 type Wins = 'East' | 'South' | 'West' | 'North';
@@ -134,51 +135,6 @@ export const exceptArray = <T>(
 };
 
 type ReachState = 'Reeched' | 'None' | 'First Turn';
-
-export class OneColorReadyHandGenerator {
-    private readyPattern: string[];
-    static generateAllHand(currentNumber: number, restCount: number): string[] {
-        if (restCount == 0) return [''];
-        if (currentNumber <= 0 || currentNumber >= 10) return [];
-        const st = String(currentNumber);
-        const add0 = this.generateAllHand(currentNumber + 1, restCount);
-        const add1 = this.generateAllHand(currentNumber + 1, restCount - 1).map(
-            (e) => st + e
-        );
-        const add2 = this.generateAllHand(currentNumber + 1, restCount - 2).map(
-            (e) => st + st + e
-        );
-        const add3 = this.generateAllHand(currentNumber + 1, restCount - 3).map(
-            (e) => st + st + st + e
-        );
-        const add4 = this.generateAllHand(currentNumber + 1, restCount - 4).map(
-            (e) => st + st + st + st + e
-        );
-        return [...add0, ...add1, ...add2, ...add3, ...add4];
-    }
-
-    importReadyHand() {
-        return [];
-    }
-    dumpReadyHand() {
-        this.readyPattern = OneColorReadyHandGenerator.generateAllHand(
-            1,
-            13
-        ).filter((e) => {
-            const hand = MahjongHand.getHandFromString(e + 'm');
-            const readyNum = MahjongHand.calcSyanten(hand);
-            const validTileCount = MahjongHand.getValidTileCount(hand).filter(
-                (e) => e.count != 0
-            );
-            return readyNum == 0 && validTileCount.length != 0;
-        });
-        this.readyPattern.forEach((e) => console.log(e));
-    }
-
-    constructor() {
-        this.readyPattern = this.importReadyHand();
-    }
-}
 
 export class MahjongHand {
     private hand: Tile[];
