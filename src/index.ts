@@ -1,38 +1,23 @@
 import { stringify } from 'querystring';
-import { MahjongHand, Tile, Context } from './MahjongHand';
+import {
+    MahjongHand,
+    Tile,
+    Context,
+    OneColorReadyHandGenerator
+} from './MahjongHand';
 const fs = require('graceful-fs');
 
-function generateAllHand(currentNumber: number, restCount: number): string[] {
-    if (restCount == 0) return [''];
-    if (currentNumber <= 0 || currentNumber >= 10) return [];
-    const st = String(currentNumber);
-    const add0 = generateAllHand(currentNumber + 1, restCount);
-    const add1 = generateAllHand(currentNumber + 1, restCount - 1).map(
-        (e) => st + e
-    );
-    const add2 = generateAllHand(currentNumber + 1, restCount - 2).map(
-        (e) => st + st + e
-    );
-    const add3 = generateAllHand(currentNumber + 1, restCount - 3).map(
-        (e) => st + st + st + e
-    );
-    const add4 = generateAllHand(currentNumber + 1, restCount - 4).map(
-        (e) => st + st + st + st + e
-    );
-    return [...add0, ...add1, ...add2, ...add3, ...add4];
-}
-
 const test: { hand: MahjongHand; context: Context }[] = [
-    // {
-    //     hand: new MahjongHand('234567s12345666p'),
-    //     context: {
-    //         tilePlace: 'Tsumo',
-    //         isConcealed: true,
-    //         winTile: new Tile('Dots', 4),
-    //         prevalentWind: new Tile('East'),
-    //         seatWind: new Tile('East')
-    //     }
-    // },
+    {
+        hand: new MahjongHand('234567s12345666p'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 4),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
     {
         hand: new MahjongHand('1234566677788p'),
         context: {
@@ -92,6 +77,106 @@ const test: { hand: MahjongHand; context: Context }[] = [
             prevalentWind: new Tile('East'),
             seatWind: new Tile('East')
         }
+    },
+    {
+        hand: new MahjongHand('1122338p112233m'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('1112233p111222m'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('1114445p111345m'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('11144466p11345m'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('123p12399m22334s'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('12399m55566677z'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('1m111222333444z'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('11m11122233355z'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('222m22245677p22s'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: new MahjongHand('2234455566777s'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
     }
 
     // new MahjongHand('123456789m55s67p'),
@@ -105,27 +190,43 @@ const test: { hand: MahjongHand; context: Context }[] = [
     // new MahjongHand('234p23466m234567s')
 ];
 
-test.forEach((e) => {
-    const context: Context = {
-        tilePlace: 'Tsumo',
-        isConcealed: true,
-        winTile: new Tile('East'),
-        prevalentWind: new Tile('East'),
-        seatWind: new Tile('East')
-    };
-    console.log(e.hand.toString());
-    console.log(MahjongHand.calcSyanten(e.hand.getHand()));
-    if (MahjongHand.isReadyHand(e.hand.getHand())) {
-        console.log(
-            MahjongHand.getValidTilesWithYaku(e.hand.getHand(), context)
-        );
-    } else if (MahjongHand.calcSyanten(e.hand.getHand()) == -1) {
-        console.log(MahjongHand.getYaku(e.hand.getHand(), e.context));
-    }
-});
-
-// const testClass = test.map((e) => new MahjongHand(e));
-// testClass.forEach((e) => {
-//     console.log(e.calcSyanten(e.getHand()));
-//     console.log(e.getValidTiles());
+// test.forEach((e) => {
+//     const context: Context = {
+//         tilePlace: 'Tsumo',
+//         isConcealed: true,
+//         winTile: new Tile('East'),
+//         prevalentWind: new Tile('East'),
+//         seatWind: new Tile('East')
+//     };
+//     MahjongHand.getSetsComposition(e.hand.getHand()).forEach((e) => {
+//         Object.keys(e.completed).forEach((el) =>
+//             console.log(e.completed['CRun'])
+//         );
+//         console.log(e.inCompleted);
+//     });
 // });
+function HandUtilTest() {
+    test.forEach((e) => {
+        const context: Context = {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('East'),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        };
+        console.log(e.hand.toString());
+        console.log(MahjongHand.calcSyanten(e.hand.getHand()));
+        if (MahjongHand.isReadyHand(e.hand.getHand())) {
+            console.log(
+                MahjongHand.getValidTilesWithYaku(e.hand.getHand(), context)
+            );
+        } else if (MahjongHand.calcSyanten(e.hand.getHand()) == -1) {
+            console.log(MahjongHand.getYaku(e.hand.getHand(), e.context));
+        }
+    });
+}
+function GenerateHandTest() {
+    const oneColorReadyHandGenerator = new OneColorReadyHandGenerator();
+    oneColorReadyHandGenerator.dumpReadyHand();
+}
+GenerateHandTest();
