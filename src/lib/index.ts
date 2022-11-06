@@ -1,4 +1,3 @@
-import { stringify } from 'querystring';
 import { MahjongHand, Tile, Context } from './MahjongHand';
 import { OneColorReadyHandGenerator } from './OneColorHandGenerator';
 const fs = require('graceful-fs');
@@ -173,6 +172,26 @@ const test: { hand: Tile[]; context: Context }[] = [
             prevalentWind: new Tile('East'),
             seatWind: new Tile('East')
         }
+    },
+    {
+        hand: MahjongHand.getHandFromString('1122334566777s'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
+    },
+    {
+        hand: MahjongHand.getHandFromString('1112444666999s'),
+        context: {
+            tilePlace: 'Tsumo',
+            isConcealed: true,
+            winTile: new Tile('Dots', 5),
+            prevalentWind: new Tile('East'),
+            seatWind: new Tile('East')
+        }
     }
 
     // MahjongHand.getHandFromString('123456789m55s67p'),
@@ -222,11 +241,8 @@ function HandUtilTest() {
 }
 async function GenerateHandTest() {
     const oneColorReadyHandGenerator = await OneColorReadyHandGenerator.build();
-    console.log(oneColorReadyHandGenerator.getRandomOne());
-    console.log(oneColorReadyHandGenerator.getRandomOne());
-    console.log(oneColorReadyHandGenerator.getRandomOne());
-    console.log(oneColorReadyHandGenerator.getRandomOne());
-    console.log(oneColorReadyHandGenerator.getRandomOne());
+    OneColorReadyHandGenerator.dumpReadyHand();
+    MahjongHand.dumpMap();
 }
-HandUtilTest();
-// GenerateHandTest();
+// HandUtilTest();
+GenerateHandTest();

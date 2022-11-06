@@ -24,12 +24,15 @@ export class OneColorReadyHandGenerator {
         return [...add0, ...add1, ...add2, ...add3, ...add4];
     }
 
-    public getRandomOne(): Tile[] {
-        return MahjongHand.getHandFromString(
+    public getRandomOne(): string {
+        console.log(
             this.readyPattern[
                 Math.floor(Math.random() * this.readyPattern.length)
             ]
         );
+        return this.readyPattern[
+            Math.floor(Math.random() * this.readyPattern.length)
+        ];
     }
 
     async importReadyHand() {

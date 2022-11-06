@@ -1,0 +1,151 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
+    margin: 0;
+}
+ul[role='list'],
+ol[role='list'] {
+    list-style: none;
+}
+html:focus-within {
+    scroll-behavior: smooth;
+}
+body {
+    min-height: 100vh;
+    text-rendering: optimizeSpeed;
+    line-height: 1.5;
+}
+a:not([class]) {
+    text-decoration-skip-ink: auto;
+}
+img,
+picture {
+    max-width: 100%;
+    display: block;
+}
+input,
+button,
+textarea,
+select {
+    font: inherit;
+}
+@media (prefers-reduced-motion: reduce) {
+    html:focus-within {
+        scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+.mahjong-hand {
+    font-size: 60px;
+}
+
+.role-info {
+    font-size: 20px;
+}
+
+.tile-column {
+    width: 120px;
+}
+td.tile-column {
+    font-size: 80px;
+    vertical-align: middle;
+}
+.point-column {
+    width: 110px;
+}
+.win-point-column {
+    width: 110px;
+}
+
+.selected-input {
+    background-color: aquamarine;
+}
+.non-selected-input {
+    background-color: none;
+}
+.omission-input {
+    background-color: rgb(255, 75, 47);
+}
+.collect-input {
+    background-color: rgb(70, 255, 91);
+}
+.wrong-input {
+    background-color: rgb(252, 255, 71);
+}
+
+.roles-column {
+    width: 190px;
+}
+td.roles-column {
+    font-size: 16px;
+    text-align: left;
+    li {
+        list-style-type: square;
+    }
+}
+table {
+    border-collapse: collapse;
+}
+.role-info tr {
+    border-bottom: solid 1px black;
+}
+.role-info td {
+    padding: 10px 4px;
+}
+.role-info th {
+    padding: 10px 4px;
+}
+.point {
+    font-size: 30px;
+    padding: 0 20px;
+}
+.field-info {
+    font-size: 30px;
+    padding: 0 20px;
+}
+
+.input-panel {
+    td {
+        width: 70px;
+        height: 70px;
+    }
+    font-size: 70px;
+}
+.player-info {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    justify-items: center;
+}
+
+.page-top {
+}
+.page-bottom {
+    margin: 0 auto;
+    width: 900px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    justify-items: center;
+    padding: 40px 40px;
+}

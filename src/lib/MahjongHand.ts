@@ -12,7 +12,7 @@ const honorArray: SuitType[] = [
     'Green Dragon',
     'Red Dragon'
 ];
-type Simples = 'Dots' | 'Bamboos' | 'Characters';
+export type Simples = 'Dots' | 'Bamboos' | 'Characters';
 const HonorsMap: { [key: string]: number } = {
     'White Dragon': 1,
     'Green Dragon': 4,
@@ -34,7 +34,7 @@ type SetsComposition = {
     NCRun: Tile[][];
     NCTriple: Tile[][];
 };
-type RoleName =
+export type RoleName =
     | 'Four Winds'
     | 'Blessing of Heaven'
     | 'Four Quads'
@@ -331,6 +331,8 @@ export class MahjongHand {
             for (let i = 1; i <= 9; i++) {
                 const hand = tiles.concat();
                 const examTile: Tile = new Tile(suit, i);
+                if (MahjongHand.getIncludeTileCount(hand, examTile) == 4)
+                    continue;
                 hand.push(examTile);
                 const syanten = this.calcSyanten(hand);
                 if (syanten < baseSyanten) {
@@ -778,7 +780,11 @@ export class MahjongHand {
                 }
                 if (
                     MahjongHand.getWinTileFromTarts(comp.inCompleted).length ==
-                    2
+                        2 &&
+                    MahjongHand.existFrom(
+                        MahjongHand.getWinTileFromTarts(comp.inCompleted),
+                        [context.winTile]
+                    )
                 )
                     return true;
                 else return false;
@@ -786,29 +792,18 @@ export class MahjongHand {
         );
     }
     static isFourConcealedTriples(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(
-            MahjongHand.exceptFrom(hand, [context.winTile])
-        );
+        const setsComposition = MahjongHand.getSetsComposition(hand);
         if (context.tilePlace == 'Tsumo') {
             return (
                 setsComposition.filter(
-                    (e) =>
-                        (e.completed['Head'].length == 1 &&
-                            e.completed['CTriple'].length == 3 &&
-                            e.inCompleted.length == 2 &&
-                            e.inCompleted[0].isSame(e.inCompleted[1]) &&
-                            e.inCompleted[0].isSame(context.winTile)) ||
-                        (e.inCompleted.length == 1 &&
-                            e.inCompleted[0].isSame(context.winTile) &&
-                            e.completed['CTriple'].length == 4)
+                    (e) => e.completed['CTriple'].length == 4
                 ).length > 0
             );
         } else {
             return (
                 setsComposition.filter((e) => {
                     e.completed['CTriple'].length == 4 &&
-                        e.inCompleted.length == 1 &&
-                        e.inCompleted[0].isSame(context.winTile);
+                        e.completed['Head'][0][0].isSame(context.winTile);
                 }).length > 0
             );
         }
@@ -1791,5 +1786,13 @@ export class MahjongHand {
         return MahjongHand.getHandFromString(MahjongHand.toString(hand))
             .map((e) => e.getStringPic())
             .join('');
+    }
+
+    static async importMap() {}
+
+    static dumpMap() {
+        for (const key of this.memo.keys()) {
+            console.log(key + '&' + this.memo.get(key));
+        }
     }
 }
