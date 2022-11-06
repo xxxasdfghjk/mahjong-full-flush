@@ -3,9 +3,9 @@ import { MahjongHand, Tile, Context } from './MahjongHand';
 import { OneColorReadyHandGenerator } from './OneColorHandGenerator';
 const fs = require('graceful-fs');
 
-const test: { hand: MahjongHand; context: Context }[] = [
+const test: { hand: Tile[]; context: Context }[] = [
     {
-        hand: new MahjongHand('234567s12345666p'),
+        hand: MahjongHand.getHandFromString('234567s12345666p'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -15,7 +15,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('1234566677788p'),
+        hand: MahjongHand.getHandFromString('1234566677788p'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -25,7 +25,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('11122233344455p'),
+        hand: MahjongHand.getHandFromString('11122233344455p'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -35,7 +35,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('1112345678899p'),
+        hand: MahjongHand.getHandFromString('1112345678899p'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -45,7 +45,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('11123456789p11z'),
+        hand: MahjongHand.getHandFromString('11123456789p11z'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -55,7 +55,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('11123789p11122z'),
+        hand: MahjongHand.getHandFromString('11123789p11122z'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -65,7 +65,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('11123789p11223m'),
+        hand: MahjongHand.getHandFromString('11123789p11223m'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -75,7 +75,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('1122338p112233m'),
+        hand: MahjongHand.getHandFromString('1122338p112233m'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -85,7 +85,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('1112233p111222m'),
+        hand: MahjongHand.getHandFromString('1112233p111222m'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -95,7 +95,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('1114445p111345m'),
+        hand: MahjongHand.getHandFromString('1114445p111345m'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -105,7 +105,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('11144466p11345m'),
+        hand: MahjongHand.getHandFromString('11144466p11345m'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -115,7 +115,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('123p12399m22334s'),
+        hand: MahjongHand.getHandFromString('123p12399m22334s'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -125,7 +125,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('12399m55566677z'),
+        hand: MahjongHand.getHandFromString('12399m55566677z'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -135,7 +135,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('1m111222333444z'),
+        hand: MahjongHand.getHandFromString('1m111222333444z'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -145,7 +145,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('11m11122233355z'),
+        hand: MahjongHand.getHandFromString('11m11122233355z'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -155,7 +155,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('222m22245677p22s'),
+        hand: MahjongHand.getHandFromString('222m22245677p22s'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -165,7 +165,7 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     },
     {
-        hand: new MahjongHand('2234455566777s'),
+        hand: MahjongHand.getHandFromString('2234455566777s'),
         context: {
             tilePlace: 'Tsumo',
             isConcealed: true,
@@ -175,15 +175,15 @@ const test: { hand: MahjongHand; context: Context }[] = [
         }
     }
 
-    // new MahjongHand('123456789m55s67p'),
-    // new MahjongHand('1245p1267m5689s1z'),
-    // new MahjongHand('1245p1267m5689s1z'),
-    // new MahjongHand('1245p1267m5689s1z'),
-    // new MahjongHand('114455p3366m77s1z'),
-    // new MahjongHand('114455p3366m77s11z'),
-    // new MahjongHand('114455p3466m77s1z'),
-    // new MahjongHand('19p119m19s1234567z'),
-    // new MahjongHand('234p23466m234567s')
+    // MahjongHand.getHandFromString('123456789m55s67p'),
+    // MahjongHand.getHandFromString('1245p1267m5689s1z'),
+    // MahjongHand.getHandFromString('1245p1267m5689s1z'),
+    // MahjongHand.getHandFromString('1245p1267m5689s1z'),
+    // MahjongHand.getHandFromString('114455p3366m77s1z'),
+    // MahjongHand.getHandFromString('114455p3366m77s11z'),
+    // MahjongHand.getHandFromString('114455p3466m77s1z'),
+    // MahjongHand.getHandFromString('19p119m19s1234567z'),
+    // MahjongHand.getHandFromString('234p23466m234567s')
 ];
 
 // test.forEach((e) => {
@@ -210,14 +210,13 @@ function HandUtilTest() {
             prevalentWind: new Tile('East'),
             seatWind: new Tile('East')
         };
-        console.log(e.hand.toString());
-        console.log(MahjongHand.calcSyanten(e.hand.getHand()));
-        if (MahjongHand.isReadyHand(e.hand.getHand())) {
-            console.log(
-                MahjongHand.getValidTilesWithYaku(e.hand.getHand(), context)
-            );
-        } else if (MahjongHand.calcSyanten(e.hand.getHand()) == -1) {
-            console.log(MahjongHand.getYaku(e.hand.getHand(), e.context));
+        console.log(MahjongHand.toString(e.hand));
+        console.log(MahjongHand.toStringPic(e.hand));
+        console.log(MahjongHand.calcSyanten(e.hand));
+        if (MahjongHand.isReadyHand(e.hand)) {
+            console.log(MahjongHand.getValidTilesWithYaku(e.hand, context));
+        } else if (MahjongHand.calcSyanten(e.hand) == -1) {
+            console.log(MahjongHand.getYaku(e.hand, e.context));
         }
     });
 }
@@ -229,4 +228,5 @@ async function GenerateHandTest() {
     console.log(oneColorReadyHandGenerator.getRandomOne());
     console.log(oneColorReadyHandGenerator.getRandomOne());
 }
-GenerateHandTest();
+HandUtilTest();
+// GenerateHandTest();

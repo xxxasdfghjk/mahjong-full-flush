@@ -1,6 +1,3 @@
-import { KeyPairSyncResult } from 'crypto';
-import { arrayBuffer } from 'stream/consumers';
-
 type SuitType = Honors | Simples | 'None';
 type Wins = 'East' | 'South' | 'West' | 'North';
 type Dragons = 'White Dragon' | 'Green Dragon' | 'Red Dragon';
@@ -25,9 +22,11 @@ const HonorsMap: { [key: string]: number } = {
     West: 17,
     North: 20
 };
-const setsStatus = ['CRun', 'CTriple', 'NCRun', 'NCTriple', 'Head'] as const;
 type WinTilePlace = 'Tsumo' | 'Ron' | 'Quad';
-
+type RoleInfo = {
+    rolePoint: number;
+    roleName: RoleName;
+};
 type SetsComposition = {
     CRun: Tile[][];
     CTriple: Tile[][];
@@ -35,6 +34,53 @@ type SetsComposition = {
     NCRun: Tile[][];
     NCTriple: Tile[][];
 };
+type RoleName =
+    | 'Four Winds'
+    | 'Blessing of Heaven'
+    | 'Four Quads'
+    | 'Nine Gates'
+    | 'All Green'
+    | 'Blessing of Earth'
+    | 'All Terminals'
+    | 'All Honors'
+    | 'Big Dragons'
+    | 'Thirteen Orphans'
+    | 'Four Concealed Triples'
+    | 'Full Flush'
+    | 'Two Double Runs'
+    | 'Pure Outside Hand'
+    | 'Half Flush'
+    | 'Three Quads'
+    | 'Three Color Triples'
+    | 'All Terminals And Honors'
+    | 'Little Dragons'
+    | 'Three Concealed Triples'
+    | 'Mixed Outside Hand'
+    | 'Full Straight'
+    | 'Seven Pairs'
+    | 'Three Color Runs'
+    | 'All Triples'
+    | 'Add A Quad'
+    | 'Double Reech'
+    | "King's Tile Draw"
+    | 'Final Tile Win'
+    | 'Double Run'
+    | 'First Turn Win'
+    | 'Concealed Self Draw'
+    | 'All Runs'
+    | 'All Simples'
+    | 'Reech'
+    | 'East'
+    | 'South'
+    | 'West'
+    | 'North'
+    | 'Green Dragon'
+    | 'Red Dragon'
+    | 'White Dragon'
+    | 'Field East'
+    | 'Field South'
+    | 'Field West'
+    | 'Field North';
 
 type HandComposition = {
     completed: SetsComposition;
@@ -63,6 +109,9 @@ export class Tile {
         this.suit = suit;
         this.number = number;
     }
+    public static um1 = '🀇';
+    public static us1 = '🀐';
+    public static up1 = '🀙';
     isSame(tile: Tile): boolean {
         return (
             tile.getSuit() == this.getSuit() &&
@@ -75,8 +124,8 @@ export class Tile {
     isSimpleTile(): boolean {
         return simplesArray.includes(this.suit);
     }
-    getNumber(): number | null {
-        return this.number;
+    getNumber(): number {
+        return this.number ?? 0;
     }
     getSuit(): SuitType {
         return this.suit;
@@ -103,9 +152,41 @@ export class Tile {
             }
         }
     }
+    getStringPic(): string {
+        switch (this.getSuit()) {
+            case 'Bamboos':
+                return String.fromCodePoint(
+                    (Tile.us1.codePointAt(0) ?? 0) + this.getNumber() - 1
+                );
+            case 'Characters':
+                return String.fromCodePoint(
+                    (Tile.um1.codePointAt(0) ?? 0) + this.getNumber() - 1
+                );
+            case 'Dots':
+                return String.fromCodePoint(
+                    (Tile.up1.codePointAt(0) ?? 0) + this.getNumber() - 1
+                );
+            case 'White Dragon':
+                return '🀆';
+            case 'Green Dragon':
+                return '🀅';
+            case 'Red Dragon':
+                return '🀄';
+            case 'East':
+                return '🀀';
+            case 'South':
+                return '🀁';
+            case 'West':
+                return '🀂';
+            case 'North':
+                return '🀃';
+            default:
+                return '';
+        }
+    }
 }
 
-export const existArray = <T>(
+const existArray = <T>(
     originArray: Array<T>,
     needleArray: Array<T>
 ): boolean => {
@@ -122,7 +203,7 @@ export const existArray = <T>(
     return result;
 };
 
-export const exceptArray = <T>(
+const exceptArray = <T>(
     originArray: Array<T>,
     subArray: Array<T>
 ): Array<T> => {
@@ -137,21 +218,10 @@ export const exceptArray = <T>(
 type ReachState = 'Reeched' | 'None' | 'First Turn';
 
 export class MahjongHand {
-    private hand: Tile[];
     private static memo: Map<String, [number, number]> = new Map();
-    private static syantenFilePath = './tarts_num.txt';
-    private reechState: ReachState = 'None';
 
     isValidFormat(str: string) {
         return true;
-    }
-
-    declareReech() {
-        this.reechState = 'First Turn';
-    }
-
-    passedFirstTurn() {
-        this.reechState = 'Reeched';
     }
 
     static getHandFromString(str: string) {
@@ -199,41 +269,36 @@ export class MahjongHand {
         return res;
     }
 
-    constructor(tileArray: Tile[]);
-    constructor(tileArray: string);
-    constructor(tileArray: string | Tile[]) {
-        if (typeof tileArray === 'string') {
-            this.hand = this.isValidFormat(tileArray)
-                ? MahjongHand.getHandFromString(tileArray)
-                : [];
-        } else {
-            this.hand = tileArray;
-        }
-    }
-    getHand() {
-        return this.hand.concat();
-    }
-    setHand(tiles: Tile[]) {
-        this.hand = tiles;
-    }
+    private constructor() {}
 
-    static async loadSyantenFile() {
-        const txt = await (
-            await (await fetch(this.syantenFilePath)).text()
-        ).split('\n');
-        for (const row of txt) {
-            const [str, set, tarts] = row.split(' ');
-            this.memo.set(str, [Number(set), Number(tarts)]);
-        }
-    }
     static isReadyHand(tiles: Tile[]) {
         return MahjongHand.calcSyanten(tiles) == 0;
+    }
+
+    static highPointWinToString(point: number) {
+        if (point < 4) return '';
+        else if (point < 6) {
+            return 'Slum';
+        } else if (point < 8) {
+            return 'One and a Half of the Slum';
+        } else if (point < 11) {
+            return 'Double Slum';
+        } else if (point < 13) {
+            return 'Three Times of the Slum';
+        } else {
+            return 'Grand Slum';
+        }
     }
 
     static getValidTilesWithYaku(
         tiles: Tile[],
         context: Context
-    ): { tile: Tile; Yaku: string[] }[] {
+    ): {
+        tile: Tile;
+        Yaku: RoleName[];
+        point: number;
+        highPointString: string;
+    }[] {
         if (tiles.length != 13) return [];
         if (MahjongHand.calcSyanten(tiles) != 0) {
             return [];
@@ -243,8 +308,18 @@ export class MahjongHand {
             const examHand = tiles.concat();
             examHand.push(tile);
             context.winTile = tile;
+            const roleInfo = MahjongHand.getYaku(examHand, context);
+            const point = roleInfo.reduce(
+                (prev, cur) => prev + cur.rolePoint,
+                0
+            );
 
-            return { tile: tile, Yaku: MahjongHand.getYaku(examHand, context) };
+            return {
+                tile: tile,
+                Yaku: roleInfo.map((e) => e.roleName),
+                point: point,
+                highPointString: this.highPointWinToString(point)
+            };
         });
     }
 
@@ -425,42 +500,6 @@ export class MahjongHand {
             : targetTiles.length -
                   this.exceptFrom(targetTiles, needleTiles).length ==
                   needleTiles.length;
-    }
-
-    except(exceptTiles: Tile[] | string): Tile[] {
-        const handTiles = this.getHand();
-        if (typeof exceptTiles == 'string') {
-            const exceptTilesFromString =
-                MahjongHand.getHandFromString(exceptTiles);
-            for (const e of exceptTilesFromString) {
-                const index = handTiles.findIndex((elem) => e.isSame(elem));
-                if (index != -1) handTiles.splice(index, 1);
-            }
-        } else {
-            for (const e of exceptTiles) {
-                const index = handTiles.findIndex((elem) => e.isSame(elem));
-                if (index != -1) handTiles.splice(index, 1);
-            }
-        }
-        return handTiles;
-    }
-
-    exist(exceptTiles: Tile[] | string): boolean {
-        return typeof exceptTiles == 'string'
-            ? this.getHand().length -
-                  this.except(MahjongHand.getHandFromString(exceptTiles))
-                      .length ==
-                  MahjongHand.getHandFromString(exceptTiles).length
-            : this.getHand().length - this.except(exceptTiles).length ==
-                  exceptTiles.length;
-    }
-
-    getAllVariableTiles(): Tile[] {
-        const res: Tile[] = [];
-        for (const suit of simplesArray)
-            for (let i = 1; i < 9; i++) res.push(new Tile(suit, i));
-        for (const suit of honorArray) res.push(new Tile(suit));
-        return res;
     }
 
     static isGreenDragon(hand: Tile[], context: Context) {
@@ -951,7 +990,7 @@ export class MahjongHand {
     static isKingsTileDraw(hand: Tile[], context: Context) {
         return context.isKingsTileDraw;
     }
-    static isFinalTurnWin(hand: Tile[], context: Context) {
+    static isFinalTileWin(hand: Tile[], context: Context) {
         return context.isFinalTile;
     }
     static isConcealedSelfDraw(hand: Tile[], context: Context) {
@@ -1501,127 +1540,127 @@ export class MahjongHand {
         });
     }
 
-    static getYaku(hand: Tile[], context: Context) {
+    static getYaku(hand: Tile[], context: Context): RoleInfo[] {
         if (MahjongHand.exceptFrom(hand, [context.winTile]).length != 13)
             return [];
         if (MahjongHand.calcSyanten(hand) != -1) return [];
-        const res = [];
+        const res: RoleInfo[] = [];
         if (this.isBlessingOfEarth(hand, context)) {
-            return ['Blessing of Earth'];
+            return [{ roleName: 'Blessing of Earth', rolePoint: 15 }];
         }
         if (this.isBlessingOfHeaven(hand, context)) {
-            return ['Blessing of Heaven'];
+            return [{ roleName: 'Blessing of Heaven', rolePoint: 15 }];
         }
         if (this.isNineGates(hand, context)) {
-            return ['Nine Gates'];
+            return [{ roleName: 'Nine Gates', rolePoint: 15 }];
         }
         if (this.isThirteenOrphans(hand, context)) {
-            return ['Thirteen Orphans'];
+            return [{ roleName: 'Thirteen Orphans', rolePoint: 15 }];
         }
         if (this.isAllGreen(hand, context)) {
-            return ['All Green'];
+            return [{ roleName: 'All Green', rolePoint: 15 }];
         }
         if (this.isBigDragons(hand, context)) {
-            return ['Big Dragons'];
+            return [{ roleName: 'Big Dragons', rolePoint: 15 }];
         }
         if (this.isFourConcealedTriples(hand, context)) {
-            return ['Four Concealed Triples'];
+            return [{ roleName: 'Four Concealed Triples', rolePoint: 15 }];
         }
         if (this.isFourWinds(hand, context)) {
-            return ['Four Winds'];
+            return [{ roleName: 'Four Winds', rolePoint: 15 }];
         }
         if (this.isThreeColorTriples(hand, context)) {
-            res.push('Three Color Triples');
+            res.push({ roleName: 'Three Color Triples', rolePoint: 2 });
         }
         if (this.isAllTerminalsAndHonors(hand, context)) {
-            res.push('All Terminals And Honors');
+            res.push({ roleName: 'All Terminals And Honors', rolePoint: 2 });
         }
         if (this.isThreeColorRuns(hand, context)) {
-            res.push('Three Color Runs');
+            res.push({ roleName: 'Three Color Runs', rolePoint: 2 });
         }
         if (this.isThreeConcealedTriples(hand, context)) {
-            res.push('Three Concealed Triples');
+            res.push({ roleName: 'Three Concealed Triples', rolePoint: 2 });
         }
         if (this.isDoubleReech(hand, context)) {
-            res.push('Double Reech');
+            res.push({ roleName: 'Double Reech', rolePoint: 2 });
         }
         if (this.isFullFlush(hand, context)) {
-            res.push('Full Flush');
+            res.push({ roleName: 'Full Flush', rolePoint: 6 });
         }
         if (this.isSevenPairs(hand, context)) {
-            res.push('Seven Pairs');
+            res.push({ roleName: 'Seven Pairs', rolePoint: 2 });
         }
         if (this.isReech(hand, context)) {
-            res.push('Reech');
+            res.push({ roleName: 'Three Concealed Triples', rolePoint: 1 });
         }
         if (this.isLittleDragons(hand, context)) {
-            res.push('Little Dragon');
+            res.push({ roleName: 'Little Dragons', rolePoint: 2 });
         }
         if (this.isFullStraight(hand, context)) {
-            res.push('Full Straight');
+            res.push({ roleName: 'Full Straight', rolePoint: 2 });
         }
         if (this.isWhiteDragon(hand, context)) {
-            res.push('White Dragon');
+            res.push({ roleName: 'White Dragon', rolePoint: 1 });
         }
         if (this.isGreenDragon(hand, context)) {
-            res.push('Green Dragon');
+            res.push({ roleName: 'Green Dragon', rolePoint: 1 });
         }
         if (this.isRedDragon(hand, context)) {
-            res.push('Red Dragon');
+            res.push({ roleName: 'Red Dragon', rolePoint: 1 });
         }
         if (this.isEast(hand, context)) {
-            res.push('East');
+            res.push({ roleName: 'East', rolePoint: 1 });
         }
         if (this.isSouth(hand, context)) {
-            res.push('South');
+            res.push({ roleName: 'South', rolePoint: 1 });
         }
         if (this.isWest(hand, context)) {
-            res.push('West');
+            res.push({ roleName: 'West', rolePoint: 1 });
         }
         if (this.isNorth(hand, context)) {
-            res.push('North');
+            res.push({ roleName: 'North', rolePoint: 1 });
         }
         if (this.isFieldEast(hand, context)) {
-            res.push('Field East');
+            res.push({ roleName: 'Field East', rolePoint: 1 });
         }
         if (this.isFieldSouth(hand, context)) {
-            res.push('Field South');
+            res.push({ roleName: 'Field South', rolePoint: 1 });
         }
         if (this.isFieldWest(hand, context)) {
-            res.push('Field West');
+            res.push({ roleName: 'Field West', rolePoint: 1 });
         }
         if (this.isFieldNorth(hand, context)) {
-            res.push('Field North');
+            res.push({ roleName: 'Field North', rolePoint: 1 });
         }
         if (this.isAllSimples(hand, context)) {
-            res.push('All Simples');
+            res.push({ roleName: 'All Simples', rolePoint: 1 });
         }
         if (this.isKingsTileDraw(hand, context)) {
-            res.push("King's Tile Draw");
+            res.push({ roleName: "King's Tile Draw", rolePoint: 1 });
         }
-        if (this.isFinalTurnWin(hand, context)) {
-            res.push('Final Turn Win');
+        if (this.isFinalTileWin(hand, context)) {
+            res.push({ roleName: 'Final Tile Win', rolePoint: 1 });
         }
         if (this.isConcealedSelfDraw(hand, context)) {
-            res.push('ConcealedSelfDraw');
+            res.push({ roleName: 'Concealed Self Draw', rolePoint: 1 });
         }
         if (this.isHalfFlush(hand, context)) {
-            res.push('Half Flush');
+            res.push({ roleName: 'Half Flush', rolePoint: 3 });
         }
         if (this.isPureOutsideHand(hand, context)) {
-            res.push('Pure Outside Hand');
+            res.push({ roleName: 'Pure Outside Hand', rolePoint: 3 });
         }
         if (this.isMixedOutsideHand(hand, context)) {
-            res.push('Mixed Outside Hand');
+            res.push({ roleName: 'Mixed Outside Hand', rolePoint: 2 });
         }
         if (this.isDoubleRun(hand, context)) {
-            res.push('Double Run');
+            res.push({ roleName: 'Double Run', rolePoint: 1 });
         }
         if (this.isAllRuns(hand, context)) {
-            res.push('All Runs');
+            res.push({ roleName: 'All Runs', rolePoint: 1 });
         }
         if (this.isTwoDoubleRun(hand, context)) {
-            res.push('Two Double Run');
+            res.push({ roleName: 'Two Double Runs', rolePoint: 3 });
         }
         return res;
     }
@@ -1658,9 +1697,7 @@ export class MahjongHand {
         return [];
     }
 
-    toString() {
-        const hand = this.getHand();
-
+    static toString(hand: Tile[]) {
         const map: { [key: string]: number } = {
             'White Dragon': 5,
             'Green Dragon': 6,
@@ -1748,5 +1785,11 @@ export class MahjongHand {
             points.length == 0 ? [0, 0] : points[points.length - 1]
         );
         return points.length == 0 ? [0, 0] : points[points.length - 1];
+    }
+
+    static toStringPic(hand: Tile[]): string {
+        return MahjongHand.getHandFromString(MahjongHand.toString(hand))
+            .map((e) => e.getStringPic())
+            .join('');
     }
 }

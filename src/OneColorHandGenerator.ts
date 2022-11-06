@@ -1,4 +1,4 @@
-import { MahjongHand } from './MahjongHand';
+import { MahjongHand, Tile } from './MahjongHand';
 
 export class OneColorReadyHandGenerator {
     private dumpFilePath =
@@ -24,10 +24,12 @@ export class OneColorReadyHandGenerator {
         return [...add0, ...add1, ...add2, ...add3, ...add4];
     }
 
-    public getRandomOne(): string {
-        return this.readyPattern[
-            Math.floor(Math.random() * this.readyPattern.length)
-        ];
+    public getRandomOne(): Tile[] {
+        return MahjongHand.getHandFromString(
+            this.readyPattern[
+                Math.floor(Math.random() * this.readyPattern.length)
+            ]
+        );
     }
 
     async importReadyHand() {
