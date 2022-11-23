@@ -1,46 +1,44 @@
-# Getting Started with Create React App
+# 麻雀清一待ちあて
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+-   https://xxxasdfghjk.github.io/mahjong-full-flush/
 
-## Available Scripts
+### 待ちの選択
 
-In the project directory, you can run:
+-   表示されているキーをクリックするか数値をキーボード入力して選択
 
-### `npm start`
+### 回答
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+-   ENTER ボタンを押すか ENTER キーを入力
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### 回答結果
 
-### `npm test`
+-   回答があっていたかどうか判定される
+    -   赤 : 待ちとして存在するが未答
+    -   黄 : 待ちとして存在しないが回答
+    -   緑 : 正答
+-   すべて正答だった場合得点が加算
+-   ENTER キーを入力するか ENTER ボタンを押して次の局へ
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### スコア
 
-### `npm run build`
+-   高目で上がった場合の得点が加算
+-   誤答の場合スコアなし
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### ゲーム進行
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+-   東一局から南 4 局まで進行
+-   親番時に得点すると連荘
+    -   誤答すると流局
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 終了時
 
-### `npm run eject`
+-   回答した手牌とその待ち・役の一覧を閲覧可能
+-   ENTER キー入力または CONTINUE ボタンのクリックでゲームを再プレイ可能
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### その他ゲーム仕様
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+-   面前かつリーチなしでのツモを想定
+-   ドラ、赤ドラなし
+-   右上の牌をクリックすると牌種を変更可能
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+### バグ報告は Issue まで
