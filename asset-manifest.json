@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/mahjong-full-flush/static/css/main.8ac428b9.css",
+    "main.js": "/mahjong-full-flush/static/js/main.46bab84d.js",
+    "static/js/787.2d1eb493.chunk.js": "/mahjong-full-flush/static/js/787.2d1eb493.chunk.js",
+    "index.html": "/mahjong-full-flush/index.html",
+    "main.8ac428b9.css.map": "/mahjong-full-flush/static/css/main.8ac428b9.css.map",
+    "main.46bab84d.js.map": "/mahjong-full-flush/static/js/main.46bab84d.js.map",
+    "787.2d1eb493.chunk.js.map": "/mahjong-full-flush/static/js/787.2d1eb493.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.8ac428b9.css",
+    "static/js/main.46bab84d.js"
+  ]
+}
