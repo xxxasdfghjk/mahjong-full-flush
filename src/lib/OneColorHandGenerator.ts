@@ -25,11 +25,6 @@ export class OneColorReadyHandGenerator {
     }
 
     public getRandomOne(): string {
-        console.log(
-            this.readyPattern[
-                Math.floor(Math.random() * this.readyPattern.length)
-            ]
-        );
         return this.readyPattern[
             Math.floor(Math.random() * this.readyPattern.length)
         ];

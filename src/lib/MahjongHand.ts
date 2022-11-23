@@ -1,9 +1,17 @@
-type SuitType = Honors | Simples | 'None';
-type Wins = 'East' | 'South' | 'West' | 'North';
-type Dragons = 'White Dragon' | 'Green Dragon' | 'Red Dragon';
-type Honors = Wins | Dragons;
+import { number } from 'yargs';
+import { allRoles } from './Yaku';
+export const WinsArray = ['East', 'South', 'West', 'North'] as const;
+export const DragonsArray = [
+    'White Dragon',
+    'Green Dragon',
+    'Red Dragon'
+] as const;
+export type SuitType = Honors | Simples | 'None';
+export type Wins = typeof WinsArray[number];
+export type Dragons = typeof DragonsArray[number];
+export type Honors = Wins | Dragons;
 const simplesArray: SuitType[] = ['Dots', 'Bamboos', 'Characters'];
-const honorArray: SuitType[] = [
+export const honorArray: SuitType[] = [
     'East',
     'South',
     'West',
@@ -25,9 +33,17 @@ const HonorsMap: { [key: string]: number } = {
 type WinTilePlace = 'Tsumo' | 'Ron' | 'Quad';
 type RoleInfo = {
     rolePoint: number;
-    roleName: RoleName;
+    roleName: string;
 };
-type SetsComposition = {
+
+export type HandInfo = {
+    composition: SetsComposition;
+    hand: Tile[];
+    context: Context;
+    isElementHand: boolean;
+};
+
+export type SetsComposition = {
     CRun: Tile[][];
     CTriple: Tile[][];
     Head: Tile[][];
@@ -100,6 +116,7 @@ export type Context = {
     isKingsTileDraw?: boolean;
     prevalentWind: Tile;
     seatWind: Tile;
+    isLeader?: boolean;
 };
 
 export class Tile {
@@ -129,6 +146,37 @@ export class Tile {
     }
     getSuit(): SuitType {
         return this.suit;
+    }
+    getSuitNumber(): number {
+        switch (this.suit) {
+            case 'Characters':
+                return 0;
+            case 'Dots':
+                return 1;
+            case 'Bamboos':
+                return 2;
+            case 'East':
+                return 3;
+            case 'South':
+                return 4;
+            case 'West':
+                return 5;
+            case 'North':
+                return 6;
+            case 'White Dragon':
+                return 7;
+            case 'Green Dragon':
+                return 8;
+            case 'Red Dragon':
+                return 9;
+            default:
+                return -1;
+        }
+    }
+    static sortTiles(hand: Tile[]) {
+        return hand
+            .sort((a, b) => (a.getNumber() ?? 0) - (b.getNumber() ?? 0))
+            .sort((a, b) => a.getSuitNumber() - b.getSuitNumber());
     }
     getNextTile(): Tile {
         if (this.isSimpleTile())
@@ -295,7 +343,8 @@ export class MahjongHand {
         context: Context
     ): {
         tile: Tile;
-        Yaku: RoleName[];
+        Yaku: string[];
+        doubles: number;
         point: number;
         highPointString: string;
     }[] {
@@ -304,23 +353,44 @@ export class MahjongHand {
             return [];
         }
         const validTiles = MahjongHand.getValidTiles(tiles);
-        return validTiles.map((tile) => {
-            const examHand = tiles.concat();
-            examHand.push(tile);
-            context.winTile = tile;
-            const roleInfo = MahjongHand.getYaku(examHand, context);
-            const point = roleInfo.reduce(
-                (prev, cur) => prev + cur.rolePoint,
-                0
-            );
-
-            return {
-                tile: tile,
-                Yaku: roleInfo.map((e) => e.roleName),
-                point: point,
-                highPointString: this.highPointWinToString(point)
-            };
-        });
+        return validTiles
+            .map((tile) => {
+                const examHand = tiles.concat();
+                examHand.push(tile);
+                context.winTile = tile;
+                const roleInfo = MahjongHand.getYaku(
+                    Tile.sortTiles(examHand),
+                    context
+                );
+                const doubles = roleInfo.reduce(
+                    (prev, cur) => prev + cur.rolePoint,
+                    0
+                );
+                const getPoint = (doubles: number) => {
+                    switch (doubles) {
+                        case 6:
+                        case 7:
+                            return 12000;
+                        case 8:
+                        case 9:
+                        case 10:
+                            return 16000;
+                        case 11:
+                        case 12:
+                            return 24000;
+                        default:
+                            return 32000;
+                    }
+                };
+                return {
+                    tile: tile,
+                    Yaku: roleInfo.map((e) => e.roleName),
+                    doubles: doubles,
+                    point: getPoint(doubles) * (context.isLeader ? 1.5 : 1),
+                    highPointString: this.highPointWinToString(doubles)
+                };
+            })
+            .sort((e1, e2) => e1.doubles - e2.doubles);
     }
 
     static getValidTiles(tiles: Tile[]) {
@@ -420,7 +490,7 @@ export class MahjongHand {
             .sort();
         const honors = hand
             .filter((e) => e.isHonorsTile())
-            .map((e) => HonorsMap[e.getSuit()] ?? 0)
+            .map((e) => HonorsMap[e.getSuit() as string] ?? 0)
             .sort();
 
         const groupBySuit = [char, dots, bamboo, honors];
@@ -504,850 +574,6 @@ export class MahjongHand {
                   needleTiles.length;
     }
 
-    static isGreenDragon(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('Green Dragon')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('Green Dragon')])
-                    )
-            ).length > 0
-        );
-    }
-
-    static isWhiteDragon(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('White Dragon')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('White Dragon')])
-                    )
-            ).length > 0
-        );
-    }
-
-    static isRedDragon(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('Red Dragon')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('Red Dragon')])
-                    )
-            ).length > 0
-        );
-    }
-
-    static isEast(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('East')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('East')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.seatWind], [new Tile('East')])
-        );
-    }
-
-    static isSouth(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('South')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('South')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.seatWind], [new Tile('South')])
-        );
-    }
-
-    static isWest(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('West')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('West')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.seatWind], [new Tile('West')])
-        );
-    }
-
-    static isNorth(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('North')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('North')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.seatWind], [new Tile('North')])
-        );
-    }
-
-    static isFieldNorth(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('North')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('North')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.prevalentWind], [new Tile('North')])
-        );
-    }
-
-    static isFieldEast(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('East')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('East')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.prevalentWind], [new Tile('East')])
-        );
-    }
-
-    static isFieldWest(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('West')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('West')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.prevalentWind], [new Tile('West')])
-        );
-    }
-
-    static isFieldSouth(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('South')])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        MahjongHand.existFrom(el, [new Tile('South')])
-                    )
-            ).length > 0 &&
-            MahjongHand.existFrom([context.prevalentWind], [new Tile('South')])
-        );
-    }
-
-    static isValueTiles(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        const variableTiles = MahjongHand.getValueTiles(context);
-        return (
-            setsComposition.filter(
-                (comp) =>
-                    comp.completed['CTriple'].find((el) =>
-                        variableTiles.includes(el[0])
-                    ) ||
-                    comp.completed['NCTriple'].find((el) =>
-                        variableTiles.includes(el[0])
-                    )
-            ).length > 0
-        );
-    }
-
-    static isHalfFlush(hand: Tile[], context: Context) {
-        const m = MahjongHand.exceptFrom(
-            hand,
-            MahjongHand.getHandFromString(
-                '11112222333344445555666677778888999m1111222233334444555566667777z'
-            )
-        );
-        const p = MahjongHand.exceptFrom(
-            hand,
-            MahjongHand.getHandFromString(
-                '11112222333344445555666677778888999p1111222233334444555566667777z'
-            )
-        );
-        const s = MahjongHand.exceptFrom(
-            hand,
-            MahjongHand.getHandFromString(
-                '11112222333344445555666677778888999s1111222233334444555566667777z'
-            )
-        );
-        return (
-            !this.isFullFlush(hand, context) &&
-            (m.length == 0 || p.length == 0 || s.length == 0)
-        );
-    }
-    static isFullFlush(hand: Tile[], context: Context) {
-        return (
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString(
-                    '111122223333444455556666777788889999m'
-                )
-            ).length == 0 ||
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString(
-                    '111122223333444455556666777788889999p'
-                )
-            ).length == 0 ||
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString(
-                    '111122223333444455556666777788889999s'
-                )
-            ).length == 0
-        );
-    }
-    static isAllHonors(hand: Tile[]) {
-        return (
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString('1111222233334444555566667777z')
-            ).length == 0
-        );
-    }
-    static isAllTerminals(hand: Tile[]) {
-        return (
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString('11119999m11119999p11119999s')
-            ).length == 0
-        );
-    }
-    static isBigDragons(hand: Tile[], context: Context) {
-        return MahjongHand.existFrom(
-            hand,
-            MahjongHand.getHandFromString('555666777z')
-        );
-    }
-    static isAllRuns(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(
-            MahjongHand.exceptFrom(hand, [context.winTile])
-        );
-        return (
-            setsComposition.filter((comp) => {
-                const head = comp.completed['Head'][0];
-                if (
-                    !head ||
-                    MahjongHand.getValueTiles(context).filter((e) =>
-                        e.isSame(head[0])
-                    ).length >= 1
-                )
-                    return false;
-                if (comp.completed['CRun'].length != 3) {
-                    return false;
-                }
-                if (
-                    MahjongHand.getWinTileFromTarts(comp.inCompleted).length ==
-                        2 &&
-                    MahjongHand.existFrom(
-                        MahjongHand.getWinTileFromTarts(comp.inCompleted),
-                        [context.winTile]
-                    )
-                )
-                    return true;
-                else return false;
-            }).length > 0
-        );
-    }
-    static isFourConcealedTriples(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        if (context.tilePlace == 'Tsumo') {
-            return (
-                setsComposition.filter(
-                    (e) => e.completed['CTriple'].length == 4
-                ).length > 0
-            );
-        } else {
-            return (
-                setsComposition.filter((e) => {
-                    e.completed['CTriple'].length == 4 &&
-                        e.completed['Head'][0][0].isSame(context.winTile);
-                }).length > 0
-            );
-        }
-    }
-    static isThreeConcealedTriples(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        if (context.tilePlace == 'Tsumo') {
-            return (
-                setsComposition.filter(
-                    (e) => e.completed['CTriple'].length == 3
-                ).length > 0
-            );
-        } else {
-            return (
-                setsComposition.filter((e) => {
-                    return (
-                        Object.keys(e.completed)
-                            .filter((name) => name != 'CTriple')
-                            .filter((el) =>
-                                e.completed[
-                                    el as keyof typeof e.completed
-                                ].find((sets) =>
-                                    MahjongHand.existFrom(sets, [
-                                        context.winTile
-                                    ])
-                                )
-                            ).length > 0
-                    );
-                }).length > 0
-            );
-        }
-    }
-    static isNineGates(hand: Tile[], context: Context) {
-        const m = MahjongHand.exceptFrom(hand, '1112345678999m');
-        const p = MahjongHand.exceptFrom(hand, '1112345678999p');
-        const s = MahjongHand.exceptFrom(hand, '1112345678999s');
-        return (
-            (m.length == 1 && m[0].getSuit() == 'Characters') ||
-            (p.length == 1 && p[0].getSuit() == 'Dots') ||
-            (s.length == 1 && s[0].getSuit() == 'Bamboos')
-        );
-    }
-    static isThirteenOrphans(hand: Tile[], context: Context) {
-        const rest = MahjongHand.exceptFrom(
-            hand,
-            MahjongHand.getHandFromString('19m19p19s1234567z')
-        );
-        if (rest.length == 1) {
-            if (
-                rest[0].getNumber() === 1 ||
-                honorArray.includes(rest[0].getSuit())
-            )
-                return true;
-        }
-    }
-    static isLittleDragons(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (e) =>
-                    ([
-                        ...e.completed['CTriple'],
-                        ...e.completed['NCTriple']
-                    ].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('555z')
-                        )
-                    ) &&
-                        [
-                            ...e.completed['CTriple'],
-                            ...e.completed['NCTriple']
-                        ].find((el) =>
-                            MahjongHand.existFrom(
-                                el,
-                                MahjongHand.getHandFromString('666z')
-                            )
-                        ) &&
-                        e.completed['Head'].find((el) =>
-                            MahjongHand.existFrom(
-                                el,
-                                MahjongHand.getHandFromString('77z')
-                            )
-                        )) ||
-                    ([
-                        ...e.completed['CTriple'],
-                        ...e.completed['NCTriple']
-                    ].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('555z')
-                        )
-                    ) &&
-                        [
-                            ...e.completed['CTriple'],
-                            ...e.completed['NCTriple']
-                        ].find((el) =>
-                            MahjongHand.existFrom(
-                                el,
-                                MahjongHand.getHandFromString('777z')
-                            )
-                        ) &&
-                        e.completed['Head'].find((el) =>
-                            MahjongHand.existFrom(
-                                el,
-                                MahjongHand.getHandFromString('66z')
-                            )
-                        )) ||
-                    ([
-                        ...e.completed['CTriple'],
-                        ...e.completed['NCTriple']
-                    ].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('666z')
-                        )
-                    ) &&
-                        [
-                            ...e.completed['CTriple'],
-                            ...e.completed['NCTriple']
-                        ].find((el) =>
-                            MahjongHand.existFrom(
-                                el,
-                                MahjongHand.getHandFromString('777z')
-                            )
-                        ) &&
-                        e.completed['Head'].find((el) =>
-                            MahjongHand.existFrom(
-                                el,
-                                MahjongHand.getHandFromString('55z')
-                            )
-                        ))
-            ).length > 0
-        );
-    }
-    static isSevenPairs(hand: Tile[], context: Context) {
-        return (
-            7 ==
-                hand
-                    .reduce((prev: Tile[], cur) => {
-                        return prev.find((e) => e.isSame(cur))
-                            ? prev
-                            : [...prev, cur];
-                    }, [])
-                    .reduce((prev, cur) => {
-                        return (
-                            prev +
-                            (hand.filter((elem) => elem.isSame(cur)).length >= 2
-                                ? 1
-                                : 0)
-                        );
-                    }, 0) && !this.isTwoDoubleRun(hand, context)
-        );
-    }
-    static isReech(hand: Tile[], context: Context) {
-        return context.isReech && !this.isDoubleReech(hand, context);
-    }
-    static isFirstTurnWin(context: Context) {
-        return context.isReechFirstTurn;
-    }
-    static isAllGreen(hand: Tile[], context: Context) {
-        return (
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString('22223333444466668888s6666z')
-            ).length == 0
-        );
-    }
-    static isAllSimples(hand: Tile[], context: Context) {
-        return (
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString(
-                    '2222333344445555666677778888p2222333344445555666677778888m2222333344445555666677778888s'
-                )
-            ).length == 0
-        );
-    }
-    static isKingsTileDraw(hand: Tile[], context: Context) {
-        return context.isKingsTileDraw;
-    }
-    static isFinalTileWin(hand: Tile[], context: Context) {
-        return context.isFinalTile;
-    }
-    static isConcealedSelfDraw(hand: Tile[], context: Context) {
-        return context.isConcealed && context.tilePlace == 'Tsumo';
-    }
-    static isDoubleRun(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        const checkDoubleRun = (sets: SetsComposition) => {
-            const map = new Map<string, number>();
-            sets['CRun']
-                .map((e) =>
-                    e
-                        .map(
-                            (el) =>
-                                String(el.getSuit()) + String(el.getNumber())
-                        )
-                        .join('')
-                )
-                .forEach((e) => {
-                    map.set(e, (map.get(e) ?? 0) + 1);
-                });
-            for (const value of map.values()) {
-                if (value == 2) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        return (
-            setsComposition.filter((e) => checkDoubleRun(e.completed)).length >
-                0 && !this.isTwoDoubleRun(hand, context)
-        );
-    }
-    static isTwoDoubleRun(hand: Tile[], context: Context) {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        const checkTwoDoubleRun = (sets: SetsComposition) => {
-            const map = new Map<string, number>();
-            sets['CRun']
-                .map((e) =>
-                    e
-                        .map(
-                            (el) =>
-                                String(el.getSuit()) + String(el.getNumber())
-                        )
-                        .join('')
-                )
-                .forEach((e) => {
-                    map.set(e, (map.get(e) ?? 0) + 1);
-                });
-
-            let count = 0;
-            for (const value of map.values()) {
-                if (value == 2) {
-                    count++;
-                    if (count >= 2) return true;
-                }
-            }
-            return false;
-        };
-        return (
-            setsComposition.filter((e) => checkTwoDoubleRun(e.completed))
-                .length > 0
-        );
-    }
-    static isMixedOutsideHand(hand: Tile[], context: Context) {
-        const mixedOutsideSets = [
-            MahjongHand.getHandFromString('111m'),
-            MahjongHand.getHandFromString('111s'),
-            MahjongHand.getHandFromString('111p'),
-            MahjongHand.getHandFromString('123m'),
-            MahjongHand.getHandFromString('123s'),
-            MahjongHand.getHandFromString('123p'),
-            MahjongHand.getHandFromString('999m'),
-            MahjongHand.getHandFromString('999s'),
-            MahjongHand.getHandFromString('999p'),
-            MahjongHand.getHandFromString('789m'),
-            MahjongHand.getHandFromString('789s'),
-            MahjongHand.getHandFromString('789p'),
-            MahjongHand.getHandFromString('111z'),
-            MahjongHand.getHandFromString('222z'),
-            MahjongHand.getHandFromString('333z'),
-            MahjongHand.getHandFromString('444z'),
-            MahjongHand.getHandFromString('555z'),
-            MahjongHand.getHandFromString('666z'),
-            MahjongHand.getHandFromString('777z')
-        ];
-        const mixedOutsideTarts = [
-            MahjongHand.getHandFromString('11m'),
-            MahjongHand.getHandFromString('11p'),
-            MahjongHand.getHandFromString('11s'),
-            MahjongHand.getHandFromString('99m'),
-            MahjongHand.getHandFromString('99p'),
-            MahjongHand.getHandFromString('99s'),
-            MahjongHand.getHandFromString('11z'),
-            MahjongHand.getHandFromString('22z'),
-            MahjongHand.getHandFromString('33z'),
-            MahjongHand.getHandFromString('44z'),
-            MahjongHand.getHandFromString('55z'),
-            MahjongHand.getHandFromString('66z'),
-            MahjongHand.getHandFromString('77z')
-        ];
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (e) =>
-                    e.completed['CRun'].filter((el) =>
-                        mixedOutsideSets.find((mos) =>
-                            MahjongHand.existFrom(mos, el)
-                        )
-                    ).length +
-                        e.completed['CTriple'].filter((el) =>
-                            mixedOutsideSets.find((mos) =>
-                                MahjongHand.existFrom(mos, el)
-                            )
-                        ).length +
-                        e.completed['NCRun'].filter((el) =>
-                            mixedOutsideSets.find((mos) =>
-                                MahjongHand.existFrom(mos, el)
-                            )
-                        ).length +
-                        e.completed['NCTriple'].filter((el) =>
-                            mixedOutsideSets.find((mos) =>
-                                MahjongHand.existFrom(mos, el)
-                            )
-                        ).length +
-                        e.completed['Head'].filter((el) =>
-                            mixedOutsideTarts.find((mot) =>
-                                MahjongHand.existFrom(mot, el)
-                            )
-                        ).length ==
-                    5
-            ).length > 0 && !this.isPureOutsideHand(hand, context)
-        );
-    }
-    static isPureOutsideHand(hand: Tile[], context: Context): boolean {
-        const pureOutsideSets = [
-            MahjongHand.getHandFromString('111m'),
-            MahjongHand.getHandFromString('111s'),
-            MahjongHand.getHandFromString('111p'),
-            MahjongHand.getHandFromString('123m'),
-            MahjongHand.getHandFromString('123s'),
-            MahjongHand.getHandFromString('123p'),
-            MahjongHand.getHandFromString('999m'),
-            MahjongHand.getHandFromString('999s'),
-            MahjongHand.getHandFromString('999p'),
-            MahjongHand.getHandFromString('789m'),
-            MahjongHand.getHandFromString('789s'),
-            MahjongHand.getHandFromString('789p')
-        ];
-        const pureOutsideTarts = [
-            MahjongHand.getHandFromString('11m'),
-            MahjongHand.getHandFromString('11p'),
-            MahjongHand.getHandFromString('11s'),
-            MahjongHand.getHandFromString('99m'),
-            MahjongHand.getHandFromString('99p'),
-            MahjongHand.getHandFromString('99s')
-        ];
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (e) =>
-                    e.completed['CRun'].filter((el) =>
-                        pureOutsideSets.find((mos) =>
-                            MahjongHand.existFrom(mos, el)
-                        )
-                    ).length +
-                        e.completed['CTriple'].filter((el) =>
-                            pureOutsideSets.find((mos) =>
-                                MahjongHand.existFrom(mos, el)
-                            )
-                        ).length +
-                        e.completed['NCRun'].filter((el) =>
-                            pureOutsideSets.find((mos) =>
-                                MahjongHand.existFrom(mos, el)
-                            )
-                        ).length +
-                        e.completed['NCTriple'].filter((el) =>
-                            pureOutsideSets.find((mos) =>
-                                MahjongHand.existFrom(mos, el)
-                            )
-                        ).length +
-                        e.completed['Head'].filter((el) =>
-                            pureOutsideTarts.find((mot) =>
-                                MahjongHand.existFrom(mot, el)
-                            )
-                        ).length ==
-                    5
-            ).length > 0
-        );
-    }
-    static isFullStraight(hand: Tile[], context: Context): boolean {
-        const setsComposition = this.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (e) =>
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('123m')
-                        )
-                    ) &&
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('456m')
-                        )
-                    ) &&
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('789m')
-                        )
-                    )
-            ).length > 0 ||
-            setsComposition.filter(
-                (e) =>
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('123p')
-                        )
-                    ) &&
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('456p')
-                        )
-                    ) &&
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('789p')
-                        )
-                    )
-            ).length > 0 ||
-            setsComposition.filter(
-                (e) =>
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('123s')
-                        )
-                    ) &&
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('456s')
-                        )
-                    ) &&
-                    e.completed['CRun'].find((el) =>
-                        MahjongHand.existFrom(
-                            el,
-                            MahjongHand.getHandFromString('789s')
-                        )
-                    )
-            ).length > 0
-        );
-    }
-    static isDoubleReech(hand: Tile[], context: Context): boolean {
-        return context.isDoubleReech ?? false;
-    }
-    static isThreeColorRuns(hand: Tile[], context: Context): boolean {
-        const isThreeColors = (tiles: Tile[][]) => {
-            for (let startRun = 1; startRun <= 7; startRun++) {
-                const mSets: Tile[] = MahjongHand.getHandFromString(
-                    String(startRun) +
-                        String(startRun + 1) +
-                        String(startRun + 2) +
-                        'm'
-                );
-                const pSets: Tile[] = MahjongHand.getHandFromString(
-                    String(startRun) +
-                        String(startRun + 1) +
-                        String(startRun + 2) +
-                        'p'
-                );
-                const sSets: Tile[] = MahjongHand.getHandFromString(
-                    String(startRun) +
-                        String(startRun + 1) +
-                        String(startRun + 2) +
-                        's'
-                );
-                const existingThreeColors =
-                    tiles.find((t) => MahjongHand.existFrom(mSets, t)) &&
-                    tiles.find((t) => MahjongHand.existFrom(pSets, t)) &&
-                    tiles.find((t) => MahjongHand.existFrom(sSets, t));
-                if (existingThreeColors) return true;
-            }
-            return false;
-        };
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter((e) =>
-                isThreeColors([...e.completed['CRun'], ...e.completed['NCRun']])
-            ).length > 0
-        );
-    }
-    static isBlessingOfEarth(hand: Tile[], context: Context): boolean {
-        return context.isBlessingOfEarth ?? false;
-    }
-    static isBlessingOfHeaven(hand: Tile[], context: Context): boolean {
-        return context.isBlessingOfHeaven ?? false;
-    }
-    static isFourWinds(hand: Tile[], context: Context): boolean {
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter(
-                (e) =>
-                    [
-                        ...e.completed['CTriple'],
-                        ...e.completed['NCTriple'],
-                        ...e.completed['Head']
-                    ].filter(
-                        (sets) =>
-                            MahjongHand.existFrom(sets, [new Tile('East')]) ||
-                            MahjongHand.existFrom(sets, [new Tile('South')]) ||
-                            MahjongHand.existFrom(sets, [new Tile('West')]) ||
-                            MahjongHand.existFrom(sets, [new Tile('North')])
-                    ).length == 4
-            ).length > 0
-        );
-    }
-    static isThreeColorTriples(hand: Tile[], context: Context): boolean {
-        const isThreeColors = (tiles: Tile[][]) => {
-            for (let triple = 1; triple <= 9; triple++) {
-                const mSets: Tile[] = MahjongHand.getHandFromString(
-                    String(triple) + String(triple) + String(triple) + 'm'
-                );
-                const pSets: Tile[] = MahjongHand.getHandFromString(
-                    String(triple) + String(triple) + String(triple) + 'p'
-                );
-                const sSets: Tile[] = MahjongHand.getHandFromString(
-                    String(triple) + String(triple) + String(triple) + 's'
-                );
-                const existingThreeColors =
-                    tiles.find((t) => MahjongHand.existFrom(mSets, t)) &&
-                    tiles.find((t) => MahjongHand.existFrom(pSets, t)) &&
-                    tiles.find((t) => MahjongHand.existFrom(sSets, t));
-                if (existingThreeColors) return true;
-            }
-            return false;
-        };
-        const setsComposition = MahjongHand.getSetsComposition(hand);
-        return (
-            setsComposition.filter((e) =>
-                isThreeColors([
-                    ...e.completed['CTriple'],
-                    ...e.completed['NCTriple']
-                ])
-            ).length > 0
-        );
-    }
-    static isAllTerminalsAndHonors(hand: Tile[], context: Context): boolean {
-        return (
-            MahjongHand.exceptFrom(
-                hand,
-                MahjongHand.getHandFromString(
-                    '11119999m11119999p11119999s1111222233334444555566667777z'
-                )
-            ).length == 0 && !this.isAllTerminals(hand)
-        );
-    }
     static getValueTiles(context: Context) {
         return [
             new Tile('White Dragon'),
@@ -1357,8 +583,6 @@ export class MahjongHand {
             context.prevalentWind
         ];
     }
-
-    static isSameComposition() {}
 
     static getCreatableTarts(minNumTile: Tile) {
         return minNumTile.isHonorsTile()
@@ -1417,7 +641,15 @@ export class MahjongHand {
             if (unsettledTile.length == 0) return [this.getInitSetsStatus()];
             else {
                 if (!headExcepted) {
-                    for (const tile of unsettledTile) {
+                    const uniqueTile = unsettledTile.reduce(
+                        (prev: Tile[], cur) => {
+                            return prev.find((e) => e.isSame(cur))
+                                ? prev
+                                : [...prev, cur];
+                        },
+                        []
+                    );
+                    for (const tile of uniqueTile) {
                         const pair = MahjongHand.getCreatablePair(tile);
                         if (MahjongHand.existFrom(unsettledTile, pair)) {
                             const result = divideBySet(
@@ -1438,36 +670,31 @@ export class MahjongHand {
                         }
                     }
                 } else {
-                    for (const tile of unsettledTile) {
-                        const creatableSets = MahjongHand.getCreatableSet(tile);
-                        let existSet = false;
-                        for (const needleSet of creatableSets) {
-                            if (
-                                MahjongHand.existFrom(unsettledTile, needleSet)
-                            ) {
-                                existSet = true;
-                                const result = divideBySet(
-                                    MahjongHand.exceptFrom(
-                                        unsettledTile,
-                                        needleSet
-                                    ),
-                                    headExcepted
-                                );
-                                if (result == null) continue;
-                                else {
-                                    const name = needleSet[0].isSame(
-                                        needleSet[1]
-                                    )
-                                        ? 'CTriple'
-                                        : 'CRun';
-                                    res = [
-                                        ...res,
-                                        ...result.map((e) => {
-                                            e[name].push(needleSet);
-                                            return e;
-                                        })
-                                    ];
-                                }
+                    const tile = unsettledTile[0];
+                    const creatableSets = MahjongHand.getCreatableSet(tile);
+                    let existSet = false;
+                    for (const needleSet of creatableSets) {
+                        if (MahjongHand.existFrom(unsettledTile, needleSet)) {
+                            existSet = true;
+                            const result = divideBySet(
+                                MahjongHand.exceptFrom(
+                                    unsettledTile,
+                                    needleSet
+                                ),
+                                headExcepted
+                            );
+                            if (result == null) continue;
+                            else {
+                                const name = needleSet[0].isSame(needleSet[1])
+                                    ? 'CTriple'
+                                    : 'CRun';
+                                res = [
+                                    ...res,
+                                    ...result.map((e) => {
+                                        e[name].push(needleSet);
+                                        return e;
+                                    })
+                                ];
                             }
                         }
                     }
@@ -1539,125 +766,61 @@ export class MahjongHand {
         if (MahjongHand.exceptFrom(hand, [context.winTile]).length != 13)
             return [];
         if (MahjongHand.calcSyanten(hand) != -1) return [];
-        const res: RoleInfo[] = [];
-        if (this.isBlessingOfEarth(hand, context)) {
-            return [{ roleName: 'Blessing of Earth', rolePoint: 15 }];
-        }
-        if (this.isBlessingOfHeaven(hand, context)) {
-            return [{ roleName: 'Blessing of Heaven', rolePoint: 15 }];
-        }
-        if (this.isNineGates(hand, context)) {
-            return [{ roleName: 'Nine Gates', rolePoint: 15 }];
-        }
-        if (this.isThirteenOrphans(hand, context)) {
-            return [{ roleName: 'Thirteen Orphans', rolePoint: 15 }];
-        }
-        if (this.isAllGreen(hand, context)) {
-            return [{ roleName: 'All Green', rolePoint: 15 }];
-        }
-        if (this.isBigDragons(hand, context)) {
-            return [{ roleName: 'Big Dragons', rolePoint: 15 }];
-        }
-        if (this.isFourConcealedTriples(hand, context)) {
-            return [{ roleName: 'Four Concealed Triples', rolePoint: 15 }];
-        }
-        if (this.isFourWinds(hand, context)) {
-            return [{ roleName: 'Four Winds', rolePoint: 15 }];
-        }
-        if (this.isThreeColorTriples(hand, context)) {
-            res.push({ roleName: 'Three Color Triples', rolePoint: 2 });
-        }
-        if (this.isAllTerminalsAndHonors(hand, context)) {
-            res.push({ roleName: 'All Terminals And Honors', rolePoint: 2 });
-        }
-        if (this.isThreeColorRuns(hand, context)) {
-            res.push({ roleName: 'Three Color Runs', rolePoint: 2 });
-        }
-        if (this.isThreeConcealedTriples(hand, context)) {
-            res.push({ roleName: 'Three Concealed Triples', rolePoint: 2 });
-        }
-        if (this.isDoubleReech(hand, context)) {
-            res.push({ roleName: 'Double Reech', rolePoint: 2 });
-        }
-        if (this.isFullFlush(hand, context)) {
-            res.push({ roleName: 'Full Flush', rolePoint: 6 });
-        }
-        if (this.isSevenPairs(hand, context)) {
-            res.push({ roleName: 'Seven Pairs', rolePoint: 2 });
-        }
-        if (this.isReech(hand, context)) {
-            res.push({ roleName: 'Three Concealed Triples', rolePoint: 1 });
-        }
-        if (this.isLittleDragons(hand, context)) {
-            res.push({ roleName: 'Little Dragons', rolePoint: 2 });
-        }
-        if (this.isFullStraight(hand, context)) {
-            res.push({ roleName: 'Full Straight', rolePoint: 2 });
-        }
-        if (this.isWhiteDragon(hand, context)) {
-            res.push({ roleName: 'White Dragon', rolePoint: 1 });
-        }
-        if (this.isGreenDragon(hand, context)) {
-            res.push({ roleName: 'Green Dragon', rolePoint: 1 });
-        }
-        if (this.isRedDragon(hand, context)) {
-            res.push({ roleName: 'Red Dragon', rolePoint: 1 });
-        }
-        if (this.isEast(hand, context)) {
-            res.push({ roleName: 'East', rolePoint: 1 });
-        }
-        if (this.isSouth(hand, context)) {
-            res.push({ roleName: 'South', rolePoint: 1 });
-        }
-        if (this.isWest(hand, context)) {
-            res.push({ roleName: 'West', rolePoint: 1 });
-        }
-        if (this.isNorth(hand, context)) {
-            res.push({ roleName: 'North', rolePoint: 1 });
-        }
-        if (this.isFieldEast(hand, context)) {
-            res.push({ roleName: 'Field East', rolePoint: 1 });
-        }
-        if (this.isFieldSouth(hand, context)) {
-            res.push({ roleName: 'Field South', rolePoint: 1 });
-        }
-        if (this.isFieldWest(hand, context)) {
-            res.push({ roleName: 'Field West', rolePoint: 1 });
-        }
-        if (this.isFieldNorth(hand, context)) {
-            res.push({ roleName: 'Field North', rolePoint: 1 });
-        }
-        if (this.isAllSimples(hand, context)) {
-            res.push({ roleName: 'All Simples', rolePoint: 1 });
-        }
-        if (this.isKingsTileDraw(hand, context)) {
-            res.push({ roleName: "King's Tile Draw", rolePoint: 1 });
-        }
-        if (this.isFinalTileWin(hand, context)) {
-            res.push({ roleName: 'Final Tile Win', rolePoint: 1 });
-        }
-        if (this.isConcealedSelfDraw(hand, context)) {
-            res.push({ roleName: 'Concealed Self Draw', rolePoint: 1 });
-        }
-        if (this.isHalfFlush(hand, context)) {
-            res.push({ roleName: 'Half Flush', rolePoint: 3 });
-        }
-        if (this.isPureOutsideHand(hand, context)) {
-            res.push({ roleName: 'Pure Outside Hand', rolePoint: 3 });
-        }
-        if (this.isMixedOutsideHand(hand, context)) {
-            res.push({ roleName: 'Mixed Outside Hand', rolePoint: 2 });
-        }
-        if (this.isDoubleRun(hand, context)) {
-            res.push({ roleName: 'Double Run', rolePoint: 1 });
-        }
-        if (this.isAllRuns(hand, context)) {
-            res.push({ roleName: 'All Runs', rolePoint: 1 });
-        }
-        if (this.isTwoDoubleRun(hand, context)) {
-            res.push({ roleName: 'Two Double Runs', rolePoint: 3 });
-        }
-        return res;
+        const compositionList = this.getSetsComposition(hand);
+        const rolesListByComposition = compositionList.map((composition) => {
+            const roles: (RoleInfo & { isGrandSlum: boolean })[] =
+                allRoles.flatMap((role) =>
+                    role.judge({
+                        composition: composition.completed,
+                        hand: hand,
+                        context,
+                        isElementHand: true
+                    })
+                        ? [
+                              {
+                                  roleName: role.roleName,
+                                  rolePoint: role.rolePointClose,
+                                  isGrandSlum: role.isGrandSlum
+                              }
+                          ]
+                        : []
+                );
+            const isGrandSlum = roles.find((e) => e.isGrandSlum);
+            return {
+                roles: roles.filter((e) => !isGrandSlum || e.isGrandSlum),
+                totalPoint: roles.reduce((prev, cur) => prev + cur.rolePoint, 0)
+            };
+        });
+        const sevenPairs = allRoles.flatMap((role) =>
+            role.judge({
+                composition: {
+                    CRun: [],
+                    CTriple: [],
+                    Head: [],
+                    NCRun: [],
+                    NCTriple: []
+                },
+                hand: hand,
+                context,
+                isElementHand: false
+            })
+                ? {
+                      roleName: role.roleName,
+                      rolePoint: role.rolePointClose
+                  }
+                : []
+        );
+
+        return [
+            ...rolesListByComposition,
+            {
+                roles: sevenPairs,
+                totalPoint: sevenPairs.reduce(
+                    (prev, cur) => prev + cur.rolePoint,
+                    0
+                )
+            }
+        ].sort((e1, e2) => e2.totalPoint - e1.totalPoint)[0].roles;
     }
 
     static getWinTileFromTarts(tarts: Tile[]) {
@@ -1719,7 +882,7 @@ export class MahjongHand {
             .join('');
         const honors = hand
             .filter((e) => e.isHonorsTile())
-            .map((e) => map[e.getSuit()] ?? 0)
+            .map((e) => map[e.getSuit() as string] ?? 0)
             .sort()
             .join('');
         return (
@@ -1788,7 +951,18 @@ export class MahjongHand {
             .join('');
     }
 
-    static async importMap() {}
+    private static syantenMemoUrl =
+        'https://raw.githubusercontent.com/xxxasdfghjk/mahjong-full-flush/main/public/calcSyantenMemo.txt';
+    static async importMap() {
+        const data = (await (await fetch(this.syantenMemoUrl)).text()).split(
+            '\n'
+        );
+        for (const i of data) {
+            const [key, value] = i.split('&');
+            const arr = value?.split(',')?.map((e) => Number(e)) ?? [0, 0];
+            this.memo.set(key, [arr[0], arr[1]]);
+        }
+    }
 
     static dumpMap() {
         for (const key of this.memo.keys()) {
