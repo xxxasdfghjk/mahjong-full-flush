@@ -1,3 +1,4 @@
+import { stringify } from 'querystring';
 import { number } from 'yargs';
 import { allRoles } from './Yaku';
 export const WinsArray = ['East', 'South', 'West', 'North'] as const;
@@ -423,9 +424,14 @@ export class MahjongHand {
     }
 
     static calcSevenPairsSyanten(hand: Tile[]) {
-        const variety = hand.reduce((prev: Tile[], cur) => {
-            return prev.find((e) => e.isSame(cur)) ? prev : [...prev, cur];
-        }, []);
+        const variety = Array.from(
+            new Map(
+                hand.map((tile) => [
+                    tile.getSuit + String(tile.getNumber),
+                    tile
+                ])
+            ).values()
+        );
         const pairNum = variety.filter(
             (e) => MahjongHand.getIncludeTileCount(hand, e) >= 2
         ).length;
